@@ -31,6 +31,12 @@
                 const pressedFloors = elevator.getPressedFloors();
                 const destinationQueue = elevator.destinationQueue;
                 console.log(`passing floor number ${currentFloorNumber} and the current direction is ${direction}`);
+
+                // go to current floor first if it is in pressed floors array
+                if (Array.isArray(pressedFloors) && pressedFloors.includes(currentFloorNumber)) {
+                    elevator.goToFloor(currentFloorNumber, true);
+                    debugger;
+                }
             });
         });
     },
