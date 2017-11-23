@@ -48,7 +48,6 @@ const config = {
                         break;
                 }
 
-                debugger;
                 return theDestinationDirection;
             }
 
@@ -64,7 +63,6 @@ const config = {
                     //  Why is this undefined?
                     //  I belive it is undefined if stopped event goes off on starting floor before lastDestinationDirection was set by passing floors event.
                     //
-                    debugger;
                     console.error('direction cannot be undefined');
                     return undefined;
                 }
@@ -93,7 +91,6 @@ const config = {
                         break;
                 }
 
-                debugger;
                 return remainingFloors;
             }
 
@@ -202,7 +199,7 @@ const config = {
             // for each elevator add listeners for every floor
             //
             floors.forEach(function (floor) {
-                var floorNumber = floor.floorNum();
+               const floorNumber = floor.floorNum();
 
                 floor.on('up_button_pressed', function() {
                     console.log(`up button pressed on floor ${floorNumber}`);
@@ -228,7 +225,6 @@ const config = {
                 const currentFloorNumber = elevator.currentFloor();
                 console.log(`the elevator is idle on floor ${currentFloorNumber}`);
                 elevator.lastDestinationDirection = setDirectionIndicator(currentFloorNumber, elevator.lastDestinationDirection);
-                debugger;
             });
 
             elevator.on('stopped_at_floor', function (currentFloorNumber) {
@@ -257,7 +253,6 @@ const config = {
 
                     if (typeof nextFloor === 'number') {
                         elevator.goToFloor(nextFloor, true);
-                        debugger;
                     }
 
                     // change the direction if someone is waiting for the elevator on the current floor and there are no remaining
@@ -269,23 +264,21 @@ const config = {
                             && buttonStates[lastDestinationDirection] !== activeButtonState
                             && buttonStates['down'] === activeButtonState
                         ) {
-                            lastDestinationDirection = 'down';
-                            setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
+                            elevator.lastDestinationDirection = 'down';
+                            setDirectionIndicator(currentFloorNumber, elevator.lastDestinationDirection);
                         }
 
                         if (lastDestinationDirection === 'down'
                             && buttonStates[lastDestinationDirection] !== activeButtonState
                             && buttonStates['up'] === activeButtonState
                         ) {
-                            lastDestinationDirection = 'up';
-                            setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
+                            elevator.lastDestinationDirection = 'up';
+                            setDirectionIndicator(currentFloorNumber, elevator.lastDestinationDirection);
                         }
 
-                        debugger;
                     }
                 }
 
-                debugger;
             });
 
             elevator.on("passing_floor", function(currentFloorNumber, direction) {
@@ -295,7 +288,6 @@ const config = {
 
                 // set the direction the elevator is traveling in so riders know not to get on if their destination is the opposite direction
                 elevator.lastDestinationDirection = setDirectionIndicator(currentFloorNumber, direction);
-                debugger;
 
                 // go to current floor first if it is in pressed floors array
                 // or got to current floor has activated button of the direction the elevator is currently going
@@ -303,7 +295,6 @@ const config = {
                     || (buttonStates[direction] === activeButtonState)
                    ) {
                     elevator.goToFloor(currentFloorNumber, true);
-                    debugger;
                 }
             });
         });
