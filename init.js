@@ -97,9 +97,9 @@ const config = {
                 pressedFloors
             ) {
                 return destinationQueue.filter((floorNumber) => {
-                    const buttonStates = floors[floorNumber].buttonStates;
+                    const buttonStates = Object.values(floors[floorNumber].buttonStates);
 
-                    return (buttonStates[direction] === activeButtonState || pressedFloors.includes(floorNumber));
+                    return (buttonStates.includes(activeButtonState) || pressedFloors.includes(floorNumber));
                 });
             }
 
