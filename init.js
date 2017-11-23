@@ -2,6 +2,7 @@ const config = {
     init (elevators, floors) {
         elevators.forEach(function (elevator) {
             let lastDestinationDirection;
+            const activeButtonState = 'activated';
 
             function getDirectionIndicator(currentFloorNumber, destinationDirection = undefined) {
                 const floorNumbers = floors.map(function (floor) {
@@ -90,6 +91,18 @@ const config = {
                 return remainingFloors;
             }
 
+            function setDestinationQueue(
+                direction,
+                destinationQueue,
+                pressedFloors
+            ) {
+                return destinationQueue.filter((floorNumber) => {
+                    const buttonStates = floors[floorNumber].buttonStates;
+
+                    return (buttonStates[direction] === activeButtonState || pressedFloors.includes(floorNumber));
+                });
+            }
+
             //
             // for each elevator add listeners for every floor
             //
@@ -115,7 +128,7 @@ const config = {
             elevator.on('idle', () => {
                 const currentFloorNumber = elevator.currentFloor();
                 console.log(`the elevator is idle on floor ${currentFloorNumber}`);
-                setDirectionIndicator(currentFloorNumber, lastDestinationDirection);
+                lastDestinationDirection = setDirectionIndicator(currentFloorNumber, lastDestinationDirection);
                 debugger;
             });
 
@@ -123,14 +136,25 @@ const config = {
                 console.log(`stopped at floor number ${currentFloorNumber}`);
                 lastDestinationDirection = setDirectionIndicator(currentFloorNumber, lastDestinationDirection);
 
+                // filter any weirdness in the destination queue
+                // such as floor numbers that are not associated with a pressed floor or active button pressed
+                elevator.destinationQueue = setDestinationQueue(
+                    lastDestinationDirection,
+                    elevator.destinationQueue,
+                    elevator.getPressedFloors()
+                );
+                // immediately change destination queue to the one assigned above
+                elevator.checkDestinationQueue();
+
                 if (lastDestinationDirection) {
                     const remainingFloors = getRemainingFloorsSortedUsingDirection(
                         lastDestinationDirection,
                         elevator.destinationQueue,
                         currentFloorNumber
                     );
-                    // if remaing floors is an array and has length make  the next floor a priority
-                    const nextFloor = Array.isArray(remainingFloors) && remainingFloors.length ? remainingFloors.shift() : undefined;
+                    //  if remaing floors is an array and has length make  the next floor a priority
+                    const nextFloorIndex = 0;
+                    const nextFloor = Array.isArray(remainingFloors) && remainingFloors.length ? remainingFloors[nextFloorIndex] : undefined;
 
                     if (typeof nextFloor === 'number') {
                         elevator.goToFloor(nextFloor, true);
@@ -143,16 +167,16 @@ const config = {
                         const buttonStates = floors[currentFloorNumber].buttonStates;
 
                         if (lastDestinationDirection === 'up'
-                            && buttonStates[lastDestinationDirection] !== 'activated'
-                            && buttonStates['down'] === 'activated'
+                            && buttonStates[lastDestinationDirection] !== activeButtonState
+                            && buttonStates['down'] === activeButtonState
                         ) {
                             lastDestinationDirection = 'down';
                             setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
                         }
 
                         if (lastDestinationDirection === 'down'
-                            && buttonStates[lastDestinationDirection] !== 'activated'
-                            && buttonStates['up'] === 'activated'
+                            && buttonStates[lastDestinationDirection] !== activeButtonState
+                            && buttonStates['up'] === activeButtonState
                         ) {
                             lastDestinationDirection = 'up';
                             setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
@@ -168,7 +192,6 @@ const config = {
             elevator.on("passing_floor", function(currentFloorNumber, direction) {
                 const pressedFloors = elevator.getPressedFloors();
                 const buttonStates = floors[currentFloorNumber].buttonStates;
-                const activatedButtonState = 'activated';
                 console.log(`passing floor number ${currentFloorNumber} and the current direction is ${direction}`);
 
                 // set the direction the elevator is traveling in so riders know not to get on if their destination is the opposite direction
@@ -178,7 +201,7 @@ const config = {
                 // go to current floor first if it is in pressed floors array
                 // or got to current floor has activated button of the direction the elevator is currently going
                 if ((Array.isArray(pressedFloors) && pressedFloors.includes(currentFloorNumber))
-                    || (buttonStates[direction] === activatedButtonState)
+                    || (buttonStates[direction] === activeButtonState)
                    ) {
                     elevator.goToFloor(currentFloorNumber, true);
                     debugger;
