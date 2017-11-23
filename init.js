@@ -55,6 +55,7 @@ const config = {
                 if (direction === undefined) {
                     //
                     //  Why is this undefined?
+                    //  I belive it is undefined if stopped event goes off on starting floor before lastDestinationDirection was set by passing floors event.
                     //
                     debugger;
                     console.error('direction cannot be undefined');
@@ -121,11 +122,45 @@ const config = {
                 lastDestinationDirection = setDirectionIndicator(currentFloorNumber, lastDestinationDirection);
 
                 if (lastDestinationDirection) {
-                    var remainingFloors = getRemainingFloorsSortedUsingDirection(lastDestinationDirection, elevator.destinationQueue, currentFloorNumber);
-                    var nextFloor = remainingFloors && remainingFloors.length ? remainingFloors.shift() : undefined;
+                    const remainingFloors = getRemainingFloorsSortedUsingDirection(
+                        lastDestinationDirection,
+                        elevator.destinationQueue,
+                        currentFloorNumber
+                    );
+                    // if remaing floors is an array
+                        // and has length
+                            // make  the next floor a priority
+                        // does not have length and current floor has non active lastDestinationDirection state
+                        // and active opposite of lastDestination state
+                            // change the direction indicator to the opposite
+                    const nextFloor = Array.isArray(remainingFloors) && remainingFloors.length ? remainingFloors.shift() : undefined;
 
                     if (typeof nextFloor === 'number') {
                         elevator.goToFloor(nextFloor, true);
+                        debugger;
+                    }
+
+                    // change the direction if someone is waiting for the elevator on the current floor and there are no remaining
+                    // destinations in the current direction
+                    if (Array.isArray(remainingFloors) && remainingFloors.length === 0) {
+                        const buttonStates = floors[currentFloorNumber].buttonStates;
+
+                        if (lastDestinationDirection === 'up'
+                                && buttonStates[lastDestinationDirection] !== 'activated'
+                                && buttonStates['down'] === 'activated'
+                        ) {
+                                lastDestinationDirection = 'down';
+                                setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
+                        }
+
+                        if (lastDestinationDirection === 'down'
+                            && buttonStates[lastDestinationDirection] !== 'activated'
+                            && buttonStates['up'] === 'activated'
+                        ) {
+                                lastDestinationDirection = 'up';
+                                setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
+                        }
+
                         debugger;
                     }
                 }
