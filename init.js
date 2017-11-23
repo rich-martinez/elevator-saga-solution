@@ -63,23 +63,25 @@ const config = {
                 }
 
                 switch (direction) {
+                        // filter out floors in the destination queue that are not in the same direction
+                        // including the current floor (so the elevator doesn't get stuck in a loop for the stopped event)
                     case 'up':
                         remainingFloors = destinationQueue
                             .filter(function (floorNumber) {
-                                return floorNumber >= currentFloorNumber;
-                            })
+                            return floorNumber > currentFloorNumber;
+                        })
                             .sort(function (numA, numB) {
-                                return numA - numB;
-                            });
+                            return numA - numB;
+                        });
                         break;
                     case 'down':
                         remainingFloors = destinationQueue
                             .filter(function (floorNumber) {
-                                return floorNumber <= currentFloorNumber;
-                            })
+                            return floorNumber < currentFloorNumber;
+                        })
                             .sort(function (numA, numB) {
-                                return numA - numB;
-                            })
+                            return numA - numB;
+                        })
                             .reverse();
                         break;
                 }
@@ -127,12 +129,7 @@ const config = {
                         elevator.destinationQueue,
                         currentFloorNumber
                     );
-                    // if remaing floors is an array
-                        // and has length
-                            // make  the next floor a priority
-                        // does not have length and current floor has non active lastDestinationDirection state
-                        // and active opposite of lastDestination state
-                            // change the direction indicator to the opposite
+                    // if remaing floors is an array and has length make  the next floor a priority
                     const nextFloor = Array.isArray(remainingFloors) && remainingFloors.length ? remainingFloors.shift() : undefined;
 
                     if (typeof nextFloor === 'number') {
@@ -146,19 +143,19 @@ const config = {
                         const buttonStates = floors[currentFloorNumber].buttonStates;
 
                         if (lastDestinationDirection === 'up'
-                                && buttonStates[lastDestinationDirection] !== 'activated'
-                                && buttonStates['down'] === 'activated'
+                            && buttonStates[lastDestinationDirection] !== 'activated'
+                            && buttonStates['down'] === 'activated'
                         ) {
-                                lastDestinationDirection = 'down';
-                                setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
+                            lastDestinationDirection = 'down';
+                            setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
                         }
 
                         if (lastDestinationDirection === 'down'
                             && buttonStates[lastDestinationDirection] !== 'activated'
                             && buttonStates['up'] === 'activated'
                         ) {
-                                lastDestinationDirection = 'up';
-                                setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
+                            lastDestinationDirection = 'up';
+                            setDirectionIndicator(currentFloorNumber, lastDestinationDirection)
                         }
 
                         debugger;
