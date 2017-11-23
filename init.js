@@ -1,6 +1,12 @@
 const config = {
     init (elevators, floors) {
-        elevators.forEach(function (elevator) {
+        const elevatorsWithIds = elevators.map((currentElevator, id) => {
+            currentElevator.id = id;
+
+            return currentElevator;
+        });
+
+        elevatorsWithIds.forEach(function (elevator) {
             let lastDestinationDirection;
             const activeButtonState = 'activated';
 
@@ -91,8 +97,8 @@ const config = {
                 return remainingFloors;
             }
 
+            // remove any floors that should not be in destination queue
             function setDestinationQueue(
-                direction,
                 destinationQueue,
                 pressedFloors
             ) {
@@ -101,6 +107,26 @@ const config = {
 
                     return (buttonStates.includes(activeButtonState) || pressedFloors.includes(floorNumber));
                 });
+            }
+
+            // should elevator go floor when the floor button was pressed
+            function shouldGoToFloor(currentFloorNumber, currentElevator, allElevators) {
+                const fullLoadFactorIndicator = 1;
+                const allOtherElevators = allElevators.filter((elevator) => {
+                    return elevator.id !== currentElevator.id;
+                });
+                const allOtherElevatorsGoingToCurrentFloor = allOtherElevators.filter((elevator) => {
+                    return elevator.destinationQueue.includes(currentFloorNumber);
+                });
+
+
+                if (elevator.loadFactor() === fullLoadFactorIndicator
+                    && (allOtherElevatorsGoingToCurrentFloor.length === 0
+                        ||
+                    )
+                ) {
+
+                }
             }
 
             //
@@ -139,7 +165,6 @@ const config = {
                 // filter any weirdness in the destination queue
                 // such as floor numbers that are not associated with a pressed floor or active button pressed
                 elevator.destinationQueue = setDestinationQueue(
-                    lastDestinationDirection,
                     elevator.destinationQueue,
                     elevator.getPressedFloors()
                 );
