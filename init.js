@@ -181,16 +181,14 @@ const config = {
                         return currentElevator.destinationQueue.length > elevator.destinationQueue.length;
                 });
 
-
                 if (currentElevator.loadFactor() < fullLoadFactorIndicator
-                    && (allOtherElevatorsGoingToCurrentFloor.length === 0
-                        || allOtherCloserElevators.length === 0
-                        || allOtherElevatorsWithFewerStops.length === 0)
+                    && allOtherElevatorsGoingToCurrentFloor.length === 0
+                    && allOtherCloserElevators.length === 0
+                    && allOtherElevatorsWithFewerStops.length === 0
                 ) {
                     // current elevator should go to current floor
                     return true;
                 }
-
                 // current elevator should not go to current floor;
                 return false;
             }
