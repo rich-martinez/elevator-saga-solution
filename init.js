@@ -73,20 +73,20 @@ const config = {
                     case 'up':
                         remainingFloors = destinationQueue
                             .filter(function (floorNumber) {
-                            return floorNumber > currentFloorNumber;
-                        })
+                                return floorNumber > currentFloorNumber;
+                            })
                             .sort(function (numA, numB) {
-                            return numA - numB;
-                        });
+                                return numA - numB;
+                            });
                         break;
                     case 'down':
                         remainingFloors = destinationQueue
                             .filter(function (floorNumber) {
-                            return floorNumber < currentFloorNumber;
-                        })
+                                return floorNumber < currentFloorNumber;
+                            })
                             .sort(function (numA, numB) {
-                            return numA - numB;
-                        })
+                                return numA - numB;
+                            })
                             .reverse();
                         break;
                 }
@@ -99,11 +99,16 @@ const config = {
                 destinationQueue,
                 pressedFloors
             ) {
-                return destinationQueue.filter((floorNumber) => {
-                    const buttonStates = Object.values(floors[floorNumber].buttonStates);
+                return destinationQueue
+                    .filter((floorNumber) => {
+                        const buttonStates = Object.values(floors[floorNumber].buttonStates);
 
-                    return (buttonStates.includes(activeButtonState) || pressedFloors.includes(floorNumber));
-                });
+                        return (buttonStates.includes(activeButtonState) || pressedFloors.includes(floorNumber));
+                    })
+                    // filter out any duplicate destination floors
+                    .filter((floorNumber, index, self) => {
+                        return index === self.indexOf(floorNumber);
+                    });
             }
 
             // should elevator go floor when the floor button was pressed
@@ -251,6 +256,7 @@ const config = {
 
                     if (typeof nextFloor === 'number') {
                         elevator.goToFloor(nextFloor, true);
+                        debugger;
                     }
 
                     // change the direction if someone is waiting for the elevator on the current floor and there are no remaining
@@ -282,17 +288,18 @@ const config = {
             elevator.on("passing_floor", function(currentFloorNumber, direction) {
                 const pressedFloors = elevator.getPressedFloors();
                 const buttonStates = floors[currentFloorNumber].buttonStates;
-                console.log(`passing floor number ${currentFloorNumber} and the current direction is ${direction}`);
 
                 // set the direction the elevator is traveling in so riders know not to get on if their destination is the opposite direction
                 elevator.lastDestinationDirection = setDirectionIndicator(currentFloorNumber, direction);
+                console.log(`passing floor number ${currentFloorNumber} and the current direction is ${elevator.lastDestinationDirection}`);
 
                 // go to current floor first if it is in pressed floors array
                 // or got to current floor has activated button of the direction the elevator is currently going
                 if ((Array.isArray(pressedFloors) && pressedFloors.includes(currentFloorNumber))
-                    || (buttonStates[direction] === activeButtonState)
+                    || (buttonStates[elevator.lastDestinationDirection] === activeButtonState)
                    ) {
                     elevator.goToFloor(currentFloorNumber, true);
+                    debugger;
                 }
             });
         });
