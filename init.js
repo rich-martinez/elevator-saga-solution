@@ -96,8 +96,8 @@ const config = {
 
             // remove any floors that should not be in destination queue
             function setDestinationQueue(
-                destinationQueue,
-                pressedFloors
+            destinationQueue,
+             pressedFloors
             ) {
                 return destinationQueue
                     .filter((floorNumber) => {
@@ -113,6 +113,7 @@ const config = {
 
             // should elevator go floor when the floor button was pressed
             function shouldGoToFloor(
+                buttonPressed,
                 currentFloorNumber,
                 currentElevator,
                 allElevators
@@ -136,17 +137,18 @@ const config = {
                     const currentElevatorLastDestinationDirection = currentElevator.lastDestinationDirection;
 
                     if ((
-                            elevatorLastDestinationDirection === upIndicator
-                                || elevatorLastDestinationDirection === downIndicator
-                        ) && (
-                            currentElevatorLastDestinationDirection === upIndicator
-                                || currentElevatorLastDestinationDirection === downIndicator
-                        )) {
+                        elevatorLastDestinationDirection !== upIndicator
+                        || elevatorLastDestinationDirection !== downIndicator
+                    ) && (
+                        currentElevatorLastDestinationDirection !== upIndicator
+                        || currentElevatorLastDestinationDirection !== downIndicator
+                    )) {
                         console.error('elevator and currentElevator must have lastDestinationDirection of up or down');
 
                         return undefined;
                     }
 
+                    // elevator and currentElevator are going the same direction
                     if (elevatorLastDestinationDirection === currentElevatorLastDestinationDirection) {
                         const elevatorFloorNumber = elevator.currentFloor();
                         const currentElevatorFloorNumber = currentElevator.currentFloor();
@@ -157,7 +159,7 @@ const config = {
                         // and if that is the same then use elevator.id compare currentElevator.id
                         if (elevatorFloorNumber === currentElevatorFloorNumber) {
                             const elevatorLoadFactor = elevator.loadFactor();
-                            const currentElevatorLoadFactor = elevator.loadFactor();
+                            const currentElevatorLoadFactor = currentElevator.loadFactor();
 
                             if (elevatorLoadFactor === currentElevatorLoadFactor) {
                                 // arbitrarily determine proximity based on id
@@ -169,12 +171,17 @@ const config = {
                             return (elevatorLoadFactor < currentElevatorLoadFactor);
                         }
 
-                        // if direction of elevator and currentElevator does not match
+                        // elevator and currentElevator are going the same direction but they are not on the same floor
                         // determine direction and then determine if elevator is closer
-                        return elevatorLastDestinationDirection === 'up'
-                            ? elevatorFloorNumber > currentElevatorFloorNumber
-                            : elevatorFloorNumber < currentElevatorFloorNumber;
+                        if (elevatorLastDestinationDirection === 'up' && buttonPressed === 'up') {
+                            return elevatorFloorNumber < currentFloorNumber;
+                        } else if (elevatorLastDestinationDirection === 'down' && buttonPressed === 'down') {
+                            return elevatorFloorNumber > currentFloorNumber;
+                        }
                     }
+
+                    // if no conditions were met the current iterated elevator is not closer
+                    return false;
                 });
 
                 // if this is not based this off of direction
@@ -183,14 +190,14 @@ const config = {
                 // with fewer stops, because in that case currentElevator could have made it to the current
                 // floor faster than an elevator that would be assigned current floor.
                 const allOtherElevatorsWithFewerStops = allOtherElevators.filter((elevator) => {
-                        return currentElevator.destinationQueue.length > elevator.destinationQueue.length;
+                    return elevator.destinationQueue.length < currentElevator.destinationQueue.length;
                 });
 
                 if (currentElevator.loadFactor() < fullLoadFactorIndicator
                     && allOtherElevatorsGoingToCurrentFloor.length === 0
                     && allOtherCloserElevators.length === 0
                     && allOtherElevatorsWithFewerStops.length === 0
-                ) {
+                   ) {
                     // current elevator should go to current floor
                     return true;
                 }
@@ -198,34 +205,47 @@ const config = {
                 return false;
             }
 
+            function elevatorDestinationQueue(elevator, id) {
+                if (elevator.id === id) {
+                    const destinationQueue = elevator.destinationQueue;
+                    debugger;
+                }
+            }
+
             //
             // for each elevator add listeners for every floor
             //
             floors.forEach(function (floor) {
-               const floorNumber = floor.floorNum();
+                const floorNumber = floor.floorNum();
 
                 floor.on('up_button_pressed', function() {
                     console.log(`up button pressed on floor ${floorNumber}`);
-                    if (shouldGoToFloor(floorNumber, elevator, elevatorsWithIdsAndDirection)) {
+                    const buttonPressed = 'up';
+                    if (shouldGoToFloor(buttonPressed, floorNumber, elevator, elevatorsWithIdsAndDirection)) {
+                        elevatorDestinationQueue(elevator, 0);
                         elevator.goToFloor(floorNumber);
                     }
                 });
 
                 floor.on('down_button_pressed', function() {
                     console.log(`down button pressed on floor ${floorNumber}`);
-                    if (shouldGoToFloor(floorNumber, elevator, elevatorsWithIdsAndDirection)) {
+                    const buttonPressed = 'down';
+                    if (shouldGoToFloor(buttonPressed, floorNumber, elevator, elevatorsWithIdsAndDirection)) {
+                        elevatorDestinationQueue(elevator, 0);
                         elevator.goToFloor(floorNumber);
                     }
                 });
             });
 
             elevator.on('floor_button_pressed', function(floorPressed) {
+                elevatorDestinationQueue(elevator, 0);
                 console.log(`floor button pressed for floor ${floorPressed}`);
                 elevator.goToFloor(floorPressed);
             });
 
             elevator.on('idle', () => {
                 const currentFloorNumber = elevator.currentFloor();
+                elevatorDestinationQueue(elevator, 0);
                 console.log(`the elevator is idle on floor ${currentFloorNumber}`);
                 elevator.lastDestinationDirection = setDirectionIndicator(currentFloorNumber, elevator.lastDestinationDirection);
             });
@@ -255,19 +275,19 @@ const config = {
                     const nextFloor = Array.isArray(remainingFloors) && remainingFloors.length ? remainingFloors[nextFloorIndex] : undefined;
 
                     if (typeof nextFloor === 'number') {
+                        elevatorDestinationQueue(elevator, 0);
                         elevator.goToFloor(nextFloor, true);
-                        debugger;
                     }
 
                     // change the direction if someone is waiting for the elevator on the current floor and there are no remaining
                     // destinations in the current direction
                     if (Array.isArray(remainingFloors) && remainingFloors.length === 0) {
                         const buttonStates = floors[currentFloorNumber].buttonStates;
-
                         if (lastDestinationDirection === 'up'
                             && buttonStates[lastDestinationDirection] !== activeButtonState
                             && buttonStates['down'] === activeButtonState
-                        ) {
+                           ) {
+                            elevatorDestinationQueue(elevator, 0);
                             elevator.lastDestinationDirection = 'down';
                             setDirectionIndicator(currentFloorNumber, elevator.lastDestinationDirection);
                         }
@@ -275,7 +295,8 @@ const config = {
                         if (lastDestinationDirection === 'down'
                             && buttonStates[lastDestinationDirection] !== activeButtonState
                             && buttonStates['up'] === activeButtonState
-                        ) {
+                           ) {
+                            elevatorDestinationQueue(elevator, 0);
                             elevator.lastDestinationDirection = 'up';
                             setDirectionIndicator(currentFloorNumber, elevator.lastDestinationDirection);
                         }
@@ -292,14 +313,14 @@ const config = {
                 // set the direction the elevator is traveling in so riders know not to get on if their destination is the opposite direction
                 elevator.lastDestinationDirection = setDirectionIndicator(currentFloorNumber, direction);
                 console.log(`passing floor number ${currentFloorNumber} and the current direction is ${elevator.lastDestinationDirection}`);
-
+                elevatorDestinationQueue(elevator, 0);
                 // go to current floor first if it is in pressed floors array
                 // or got to current floor has activated button of the direction the elevator is currently going
                 if ((Array.isArray(pressedFloors) && pressedFloors.includes(currentFloorNumber))
                     || (buttonStates[elevator.lastDestinationDirection] === activeButtonState)
                    ) {
+                    elevatorDestinationQueue(elevator, 0);
                     elevator.goToFloor(currentFloorNumber, true);
-                    debugger;
                 }
             });
         });
