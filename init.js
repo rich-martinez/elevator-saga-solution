@@ -118,6 +118,13 @@ const config = {
                 currentElevator,
                 allElevators
             ) {
+                function numberDifference(num1, num2){
+                    // difference could be zero
+                    return (num1 > num2)
+                        ? num1 - num2
+                        : num2 - num1
+                }
+
                 const fullLoadFactorIndicator = 1;
                 // all elevators sans the elevator in question
                 const allOtherElevators = allElevators.filter((elevator) => {
@@ -135,35 +142,21 @@ const config = {
                     const downIndicator = 'down';
                     const elevatorLastDestinationDirection = elevator.lastDestinationDirection;
                     const currentElevatorLastDestinationDirection = currentElevator.lastDestinationDirection;
-
-                    if ((
-                        elevatorLastDestinationDirection !== upIndicator
-                        || elevatorLastDestinationDirection !== downIndicator
-                    ) && (
-                        currentElevatorLastDestinationDirection !== upIndicator
-                        || currentElevatorLastDestinationDirection !== downIndicator
-                    )) {
-                        console.error('elevator and currentElevator must have lastDestinationDirection of up or down');
-
-                        return undefined;
-                    }
+                    const elevatorLoadFactor = elevator.loadFactor();
+                    const currentElevatorLoadFactor = currentElevator.loadFactor();
 
                     // elevator and currentElevator are going the same direction
                     if (elevatorLastDestinationDirection === currentElevatorLastDestinationDirection) {
                         const elevatorFloorNumber = elevator.currentFloor();
                         const currentElevatorFloorNumber = currentElevator.currentFloor();
 
-
                         // if elevator and currentElevator are on the same floor
                         // use elevator.loadFactor() and currentElevator.loadFactor
                         // and if that is the same then use elevator.id compare currentElevator.id
                         if (elevatorFloorNumber === currentElevatorFloorNumber) {
-                            const elevatorLoadFactor = elevator.loadFactor();
-                            const currentElevatorLoadFactor = currentElevator.loadFactor();
-
                             if (elevatorLoadFactor === currentElevatorLoadFactor) {
                                 // arbitrarily determine proximity based on id
-                                // this is just to make some elevator decideds to go to this floor
+                                // this is just to make sure that elevator decides to go to this floor
                                 return elevator.id < currentElevator.id;
                             }
 
@@ -173,10 +166,50 @@ const config = {
 
                         // elevator and currentElevator are going the same direction but they are not on the same floor
                         // determine direction and then determine if elevator is closer
-                        if (elevatorLastDestinationDirection === 'up' && buttonPressed === 'up') {
+                        if (elevatorLastDestinationDirection === upIndicator && buttonPressed === upIndicator) {
                             return elevatorFloorNumber < currentFloorNumber;
-                        } else if (elevatorLastDestinationDirection === 'down' && buttonPressed === 'down') {
+                        } else if (elevatorLastDestinationDirection === downIndicator && buttonPressed === downIndicator) {
                             return elevatorFloorNumber > currentFloorNumber;
+                        } else {
+                            //  if elevatorLastDestinationDirection && currentElevatorLastDestinationDirection
+                            // are both not equal to up or down then assume they are starting at the bottom
+
+                            return elevatorFloorNumber < currentFloorNumber;
+                        }
+                    } else {
+                        //  if elevator and current elevator are not going the same direction
+
+                        const elevatorDistanceFromCurrentFloor = numberDifference(
+                            elevatorFloorNumber,
+                            currentFloorNumber
+                        );
+                        const currentElevatorDistanceFromCurrentFloor = numberDifference(
+                            currentElevatorFloorNumber,
+                            currentFloorNumber
+                        );
+
+                        const currentElevatorIsCloserToCurrentFloor = (
+                            currentElevatorDistanceFromCurrentFloor < elevatorDistanceFromCurrentFloor
+                        );
+
+                        // if NOT (current elevator is closer going the wrong direction and has no stops)
+                            // AND if elevator destination direction is up and its floor number is less than (or equal to ?) currentFloorNumber
+                                // in order to do equal to we would have to return an identifier to go to that floor first
+                                // because I don't think that a button would be pressed on that floor if the elevator
+                                // was stopped or idle. The rider would probably just get on. However, if the elevator is
+                                // passing the current floor we would have to set it to go to first, but somehow do that
+                                // only for the return true option since that is how we assign the current floor.
+                            // TODO maybe: and if currentElevator has fewer remaining stops
+                        if (!(currentElevatorIsCloserToCurrentFloor && currentElevator.destinationQueue.length === 0)) {
+                            if (elevatorLastDestinationDirection === upIndicator
+                                && elevatorFloorNumber < currentFloorNumber) {
+                                // elevator is closer
+                                return true;
+                            } else if (elevatorLastDestinationDirection === downIndicator
+                                && elevatorFloorNumber > currentFloorNumber) {
+                                // elevator is closer
+                                return true;
+                            }
                         }
                     }
 
@@ -196,7 +229,9 @@ const config = {
                 if (currentElevator.loadFactor() < fullLoadFactorIndicator
                     && allOtherElevatorsGoingToCurrentFloor.length === 0
                     && allOtherCloserElevators.length === 0
-                    && allOtherElevatorsWithFewerStops.length === 0
+                    // I think the allOtherCloserElevators is doing some of the fewer stops logic
+                    // temporarily disable this check to see if it makes a difference
+                    // && allOtherElevatorsWithFewerStops.length === 0
                    ) {
                     // current elevator should go to current floor
                     return true;
